@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -29,8 +30,8 @@ func calculateHash(file *os.File, hasher hash.Hash) (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func storeHashes(filepath string) error {
-	file, err := os.Open(filepath)
+func storeHashes(file_path string) error {
+	file, err := os.Open(file_path)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,6 @@ func storeHashes(filepath string) error {
 	if err != nil {
 		return err
 	}
-	println("MD5 Hash: ", md5Hash)
 
 	if _, err := file.Seek(0, 0); err != nil {
 		return err
@@ -52,7 +52,29 @@ func storeHashes(filepath string) error {
 	if err != nil {
 		return err
 	}
-	println("SHA256 Hash: ", shaHash)
+
+	filename := filepath.Base(file_path)
+	
+	md5HashFile, err := os.Create("MD5-" + filename + ".txt")
+	if err != nil {
+		return err
+	}
+	defer md5HashFile.Close()
+
+	_, err = md5HashFile.Write([]byte(md5Hash))
+	if err != nil {
+		return err
+	}
+
+	sha256HashFile, err := os.Create("SHA-256-" + filename + ".txt")
+	if err != nil {
+		return err
+	}
+
+	_, err = sha256HashFile.Write([]byte(shaHash))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
