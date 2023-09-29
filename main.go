@@ -13,7 +13,16 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const BUFFER_SIZE = 1024
+const (
+	BUFFER_SIZE = 1024
+	PARTITION_ENTRY_SIZE = 0x10
+	PARTITION_ENTRY_1_OFFSET = 0x01be
+	BOOT_SIGNATURE = 0x01fe
+	PARTITION_ENTRY_FLAG_OFFSET = 0x00
+	PARTITION_TYPE_OFFSET = 0x04
+	PARTITION_LBA_OFFSET = 0x08
+	PARTITION_SIZE_OFFSET = 0x0c
+)
 
 func calculateHash(file *os.File, hasher hash.Hash) (string, error) {
 	buffer := make([]byte, BUFFER_SIZE)
@@ -79,6 +88,49 @@ func storeHashes(file_path string) error {
 	return nil
 }
 
+func analyzeMBRImage(buffer []byte) error {
+	println("MBR Image")
+	return nil
+}
+
+func analyzeGPTImage(buffer []byte) error {
+	println("GPT Image")
+	return nil
+}
+
+func analyzeImage(filepath string) error {
+	buffer := make([]byte, 2*BUFFER_SIZE)
+
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	n, err := file.Read(buffer)
+	if err == io.EOF {
+		return err
+	} else if n < 2*BUFFER_SIZE {
+		log.Fatalln("File is not large enough.")
+	} else if err != nil {
+		return err
+	}
+
+	partitionEntry := buffer[PARTITION_ENTRY_1_OFFSET:PARTITION_ENTRY_1_OFFSET+PARTITION_ENTRY_SIZE]
+	if partitionEntry[PARTITION_TYPE_OFFSET] == 0x07 {
+		err := analyzeMBRImage(buffer)
+		if err != nil {
+			return err
+		}
+	} else if partitionEntry[PARTITION_TYPE_OFFSET] == 0xee {
+		err := analyzeGPTImage(buffer)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "boot_info"
@@ -94,6 +146,7 @@ func main() {
 	app.Action = func(ctx *cli.Context) error {
 		println(ctx.String("filepath"))
 		storeHashes(ctx.String("filepath"))
+		analyzeImage(ctx.String("filepath"))
 		return nil
 	}
 
