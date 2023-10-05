@@ -116,13 +116,20 @@ func analyzeImage(filepath string) error {
 		return err
 	}
 
-	partitionEntry := buffer[PARTITION_ENTRY_1_OFFSET:PARTITION_ENTRY_1_OFFSET+PARTITION_ENTRY_SIZE]
-	if partitionEntry[PARTITION_TYPE_OFFSET] == 0x07 {
+
+	partitionEntryOne := buffer[PARTITION_ENTRY_1_OFFSET:PARTITION_ENTRY_1_OFFSET+PARTITION_ENTRY_SIZE]
+    partitionEntryTwo := buffer[PARTITION_ENTRY_1_OFFSET+PARTITION_ENTRY_SIZE:PARTITION_ENTRY_1_OFFSET+2*PARTITION_ENTRY_SIZE]
+    partitionEntryThree := buffer[PARTITION_ENTRY_1_OFFSET+2*PARTITION_ENTRY_SIZE:PARTITION_ENTRY_1_OFFSET+3*PARTITION_ENTRY_SIZE]
+    partitionEntryFour := buffer[PARTITION_ENTRY_1_OFFSET+3*PARTITION_ENTRY_SIZE:PARTITION_ENTRY_1_OFFSET+4*PARTITION_ENTRY_SIZE]
+    if partitionEntryOne[PARTITION_TYPE_OFFSET] == 0x07 || 
+    partitionEntryTwo[PARTITION_TYPE_OFFSET] == 0x07 ||
+    partitionEntryThree[PARTITION_TYPE_OFFSET] == 0x07 ||
+    partitionEntryFour[PARTITION_TYPE_OFFSET] == 0x07 {
 		err := analyzeMBRImage(buffer)
 		if err != nil {
 			return err
 		}
-	} else if partitionEntry[PARTITION_TYPE_OFFSET] == 0xee {
+	} else if partitionEntryOne[PARTITION_TYPE_OFFSET] == 0xee {
 		err := analyzeGPTImage(buffer)
 		if err != nil {
 			return err
