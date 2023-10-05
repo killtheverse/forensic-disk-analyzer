@@ -20,7 +20,6 @@ func main() {
 		},
 	}
 	app.Action = func(ctx *cli.Context) error {
-		println(ctx.String("filepath"))
 		StoreHashes(ctx.String("filepath"))
 		AnalyzeImage(ctx.String("filepath"))
 		return nil

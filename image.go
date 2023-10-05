@@ -1,10 +1,22 @@
 package main
 
 import (
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
 )
+
+var PartitionType map[byte]string
+
+func init() {
+	err := json.Unmarshal(PartitionTypesJson, &PartitionType)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func AnalyzeImage(filepath string) error {
 	buffer := make([]byte, 2*BUFFER_SIZE)
@@ -47,7 +59,17 @@ func AnalyzeImage(filepath string) error {
 }
 
 func analyzeMBRImage(buffer []byte) error {
-	println("MBR Image")
+	for partitionNo:=1; partitionNo<=4; partitionNo++ {
+		partitionEntry := buffer[PARTITION_ENTRY_1_OFFSET + (partitionNo-1)*PARTITION_ENTRY_SIZE : PARTITION_ENTRY_1_OFFSET + partitionNo*PARTITION_ENTRY_SIZE]
+		partitionTypeByte := partitionEntry[PARTITION_TYPE_OFFSET]
+		if partitionTypeByte == 0 {
+			continue
+		}
+		partitionLBAAddress := binary.LittleEndian.Uint32(partitionEntry[PARTITION_LBA_OFFSET : PARTITION_LBA_OFFSET+4])*512
+		partitionSize := binary.LittleEndian.Uint32(partitionEntry[PARTITION_SIZE_OFFSET : PARTITION_SIZE_OFFSET+4])*512
+		fmt.Printf("(%02x) %s %d %d\n", partitionTypeByte, PartitionType[partitionTypeByte], partitionLBAAddress, partitionSize)
+	}
+
 	return nil
 }
 
