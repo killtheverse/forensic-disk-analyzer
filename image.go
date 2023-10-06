@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 )
 
@@ -14,13 +13,12 @@ var PartitionType map[byte]string
 func init() {
 	err := json.Unmarshal(PartitionTypesJson, &PartitionType)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 }
 
 func AnalyzeImage(filepath string) error {
 	buffer := make([]byte, 2*BUFFER_SIZE)
-
 	file, err := os.Open(filepath)
 	if err != nil {
 		return err
@@ -31,7 +29,7 @@ func AnalyzeImage(filepath string) error {
 	if err == io.EOF {
 		return err
 	} else if n < 2*BUFFER_SIZE {
-		log.Fatalln("File is not large enough.")
+		return fmt.Errorf("file is not large enough")
 	} else if err != nil {
 		return err
 	}
@@ -68,7 +66,7 @@ func analyzeMBRImage(file *os.File) error {
 	if err == io.EOF {
 		return err
 	} else if n < BUFFER_SIZE {
-		log.Fatalln("File is not large enough.")
+		return fmt.Errorf("file is not large enough")
 	} else if err != nil {
 		return err
 	}
@@ -79,12 +77,13 @@ func analyzeMBRImage(file *os.File) error {
 		partitionEntry := buffer[PARTITION_ENTRY_1_OFFSET + (partitionNo-1)*PARTITION_ENTRY_SIZE : PARTITION_ENTRY_1_OFFSET + partitionNo*PARTITION_ENTRY_SIZE]
 		partitionTypeByte := partitionEntry[PARTITION_TYPE_OFFSET]
 		if partitionTypeByte == 0 {
+			fmt.Printf("(00) Empty, 0, 0\n")
 			continue
 		}
-		partitionLBAAddress := binary.LittleEndian.Uint32(partitionEntry[PARTITION_LBA_OFFSET : PARTITION_LBA_OFFSET+4])*512
-		partitionLBAAddresses = append(partitionLBAAddresses, partitionLBAAddress)
+		partitionLBA := binary.LittleEndian.Uint32(partitionEntry[PARTITION_LBA_OFFSET : PARTITION_LBA_OFFSET+4])
+		partitionLBAAddresses = append(partitionLBAAddresses, partitionLBA*512)
 		partitionSize := binary.LittleEndian.Uint32(partitionEntry[PARTITION_SIZE_OFFSET : PARTITION_SIZE_OFFSET+4])*512
-		fmt.Printf("(%02x) %s %d %d\n", partitionTypeByte, PartitionType[partitionTypeByte], partitionLBAAddress, partitionSize)
+		fmt.Printf("(%02x) %s, %d, %d\n", partitionTypeByte, PartitionType[partitionTypeByte], partitionLBA, partitionSize)
 	}
 
 	for i, partitionLBAAddress := range partitionLBAAddresses {
@@ -124,7 +123,7 @@ func analyzeGPTImage(file *os.File) error {
 	if err == io.EOF {
 		return err
 	} else if n < BUFFER_SIZE {
-		log.Fatalln("File is not large enough.")
+		return fmt.Errorf("file is not large enough")
 	} else if err != nil {
 		return err
 	}
@@ -151,8 +150,8 @@ func analyzeGPTImage(file *os.File) error {
 			continue
 		}
 		
-		startingLBAAddress := binary.LittleEndian.Uint64(partitionEntry[PARTITION_ENTRY_START_LBA_OFFSET:PARTITION_ENTRY_START_LBA_OFFSET+8])*512
-		endingLBAAddress := binary.LittleEndian.Uint64(partitionEntry[PARTITION_ENTRY_END_LBA_OFFSET:PARTITION_ENTRY_END_LBA_OFFSET+8])*512
+		startingLBA := binary.LittleEndian.Uint64(partitionEntry[PARTITION_ENTRY_START_LBA_OFFSET:PARTITION_ENTRY_START_LBA_OFFSET+8])
+		endingLBA := binary.LittleEndian.Uint64(partitionEntry[PARTITION_ENTRY_END_LBA_OFFSET:PARTITION_ENTRY_END_LBA_OFFSET+8])
 
 		fmt.Printf("Partition number: %d\n", partitionNo)
 		fmt.Printf("Partition Type GUID : ")
@@ -160,10 +159,11 @@ func analyzeGPTImage(file *os.File) error {
 			fmt.Printf("%02x", b)
 		}
 		fmt.Printf("\n")
-		fmt.Printf("Starting LBA address in hex: %x\n", startingLBAAddress)
-		fmt.Printf("Ending LBA address in hex: %x\n", endingLBAAddress)
-		fmt.Printf("Starting LBA address in Decimal: %d\n", startingLBAAddress)
-		fmt.Printf("Ending LBA address in Decimal: %d\n", endingLBAAddress)
+		fmt.Printf("Starting LBA address in hex: 0x%x\n", startingLBA)
+		fmt.Printf("ending LBA address in hex: 0x%x\n", endingLBA)
+		fmt.Printf("starting LBA address in Decimal: %d\n", startingLBA)
+		fmt.Printf("ending LBA address in Decimal: %d\n", endingLBA)
+		fmt.Printf("\n")
 
 		partitionEntryAddress += 128
 	}
